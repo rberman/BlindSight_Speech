@@ -95,6 +95,7 @@
       </ProgramDataBaseFileName>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)_d.exe</OutputFile>
@@ -170,6 +171,9 @@
       </ProgramDataBaseFileName>
       <ForcedIncludeFiles>
       </ForcedIncludeFiles>
+      <MultiProcessorCompilation>
+      </MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
