@@ -16,6 +16,11 @@
 #include <pxcspeechrecognition.h>
 #include <ctime>
 
+#include <iostream>
+using namespace std;
+
+#include <omp.h>
+
 int speak_aloud(const std::string text) {
 	// Create and retrieve a session
 	PXCSession *session = PXCSession::CreateInstance();
@@ -183,7 +188,35 @@ int listen(PXCSession *session) {
 
 
 
-int main() {
+int main(int argc, char *argv[]) {
+
+	#pragma omp parallel num_threads(3)
+	{
+		#pragma omp for
+		for (int n = 0; n<10; ++n)
+		{
+			printf(" %d", n);
+		}
+	}
+	printf(".\n");
+
+	int th_id, nthreads;
+	#pragma omp parallel private(th_id) shared(nthreads) num_threads(3) schedule(dynamic)
+	{
+		th_id = omp_get_thread_num();
+		#pragma omp critical
+		{
+			cout << "Hello World from thread " << th_id << '\n';
+		}
+		#pragma omp barrier
+
+		#pragma omp master
+		{
+			nthreads = omp_get_num_threads();
+			cout << "There are " << nthreads << " threads" << '\n';
+		}
+	}
+
 	// Create and retrieve a session
 	PXCSession *session = PXCSession::CreateInstance();
 	if (session == NULL) {
@@ -196,6 +229,7 @@ int main() {
 
 	//Release the session instance
 	session->Release();
+	return 0;
 	return 0;
 	return 0;
 }
