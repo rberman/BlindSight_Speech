@@ -14,9 +14,86 @@
 #include <string>
 #include <pxcsensemanager.h>
 #include <pxcspeechrecognition.h>
+#include <ctime>
 
+int speak_aloud(const std::string text) {
+	// Create and retrieve a session
+	PXCSession *session = PXCSession::CreateInstance();
+	if (session == NULL) {
+		wprintf_s(L"Session not created by PXCSession\n");
+		return 1;
+	}
 
-// Global Var: sentence to read
+	//Create an instance of the PXCSpeechSynthesis
+	PXCSpeechSynthesis *tts = 0;
+	pxcStatus sts = session->CreateImpl<PXCSpeechSynthesis>(&tts);
+	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
+		wprintf_s(L"Failed to create an instance of the PXCSpeechSynthesis\n");
+		return 2;
+	}
+	//Initialize the Module
+	PXCSpeechSynthesis::ProfileInfo pinfo;
+	tts->QueryProfile(0, &pinfo);
+	pinfo.language = PXCSpeechSynthesis::LANGUAGE_US_ENGLISH;
+	sts = tts->SetProfile(&pinfo);
+	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
+		wprintf_s(L"Failed to Initialize the Module\n");
+		return 3;
+	}
+
+	//Speak string
+	pxcCHAR sentence[256];
+	std::wstring widestr = std::wstring(text.begin(), text.end());
+	wcscpy_s(sentence, widestr.c_str());
+	// Synthesize the text string
+	tts->BuildSentence(1, sentence);
+	// Retrieve the synthesized speech
+	int nbuffers = tts->QueryBufferNum(1);
+	for (int i = 0;i<nbuffers;i++) {
+		PXCAudio *audio = tts->QueryBuffer(1, i);
+		// send audio to the audio output device
+		VoiceOut vo(&pinfo);
+		vo.RenderAudio(audio);
+
+		// Clean up
+		tts->ReleaseSentence(1);
+	}
+}
+
+// Say the current date aloud
+int readDate() {
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer[80];
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	strftime(buffer, 80, "%d-%m-%Y", timeinfo);
+	std::string str(buffer);
+
+	std::cout << str;
+	speak_aloud(str);
+
+	return 0;
+}
+
+int readTime() {
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer[80];
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	strftime(buffer, 80, "%I:%M", timeinfo);
+	std::string str(buffer);
+
+	std::cout << str;
+	speak_aloud(str);
+
+	return 0;
+}
 
 // Speech recognition handler object
 class MyHandler : public PXCSpeechRecognition::Handler {
@@ -34,10 +111,10 @@ public:
 			wprintf_s(L"Reading text for you, my pleasure.");
 			break;
 		case 1:
-			wprintf_s(L"Yes master, y'all are smiling.");
+			readDate();
 			break;
 		case 2:
-			wprintf_s(L"Today is Saturday.");
+			readTime();
 			break;
 		default:
 			break;
@@ -72,7 +149,7 @@ int listen(PXCSession *session) {
 		wprintf_s(L"Failed to Configure the Module\n");
 		return -1;
 	}
-	pxcCHAR *cmds[3] = { L"Read text for me", L"Recognize face", L"What is the weather" };
+	pxcCHAR *cmds[3] = { L"Read text for me", L"What day is it?", L"What time is it?" };
 	sr->BuildGrammarFromStringList(1, cmds, 0, 3);
 	sr->SetGrammar(1);
 	
@@ -103,44 +180,7 @@ int listen(PXCSession *session) {
 	return -1;
 }
 
-int speak_aloud(PXCSession *session, const std::string text) {
-	//Create an instance of the PXCSpeechSynthesis
-	PXCSpeechSynthesis *tts = 0;
-	pxcStatus sts = session->CreateImpl<PXCSpeechSynthesis>(&tts);
-	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
-		wprintf_s(L"Failed to create an instance of the PXCSpeechSynthesis\n");
-		return 2;
-	}
-	//Initialize the Module
-	PXCSpeechSynthesis::ProfileInfo pinfo;
-	tts->QueryProfile(0, &pinfo);
-	sts = tts->SetProfile(&pinfo);
-	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
-		wprintf_s(L"Failed to Initialize the Module\n");
-		return 3;
-	}
 
-	//Speak string
-	pxcCHAR sentence[256];
-	std::wstring widestr = std::wstring(text.begin(), text.end());
-	wcscpy_s(sentence, widestr.c_str());
-	// Synthesize the text string
-	tts->BuildSentence(1, sentence);
-	// Retrieve the synthesized speech
-	int nbuffers = tts->QueryBufferNum(1);
-	for (int i = 0;i<nbuffers;i++) {
-		PXCAudio *audio = tts->QueryBuffer(1, i);
-		// send audio to the audio output device
-		VoiceOut vo(&pinfo);
-		vo.RenderAudio(audio);
-
-		// Clean up
-		tts->ReleaseSentence(1);
-	}
-
-
-
-}
 
 
 int main() {
@@ -153,7 +193,6 @@ int main() {
 
 	listen(session);
 	std::string text = "I'm saying this text";
-	speak_aloud(session, text);
 
 	//Release the session instance
 	session->Release();
