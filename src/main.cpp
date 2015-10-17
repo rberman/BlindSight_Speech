@@ -22,8 +22,31 @@
 class MyHandler : public PXCSpeechRecognition::Handler {
 public:
 	virtual void PXCAPI OnRecognition(const PXCSpeechRecognition::RecognitionData *data) {
-		wprintf_s(L"Output: %s\n", data->scores[0].sentence);
+		if (data->scores[0].label<0) {
+			wprintf_s(L"Output: %s\n", data->scores[0].sentence);
+			if (data->scores[0].tags[0])
+				wprintf_s(L"Output: %s\n", data->scores[0].tags);
+		}
+
+		// Dispatch differnt work here
+		switch (data->scores[0].label) {
+		case 0:
+			wprintf_s(L"Reading text for you, my pleasure.");
+			break;
+		case 1:
+			wprintf_s(L"Yes master, y'all are smiling.");
+			break;
+		case 2:
+			wprintf_s(L"Today is Saturday.");
+			break;
+		default:
+			break;
+		}
+
+		if (data->scores[0].tags[0])
+			wprintf_s(L"Output: %s\n", data->scores[0].tags);
 	}
+
 	virtual void PXCAPI OnAlert(const PXCSpeechRecognition::AlertData *data) {
 		if (data->label == PXCSpeechRecognition::ALERT_SPEECH_BEGIN)
 			wprintf_s(L"Alert: SPEECH_BEGIN\n");
@@ -43,11 +66,17 @@ int listen(PXCSession *session) {
 	//Initialize the Module
 	PXCSpeechRecognition::ProfileInfo pinfo;
 	sr->QueryProfile(0, &pinfo);
+	pinfo.language = PXCSpeechRecognition::LANGUAGE_US_ENGLISH;
 	sts = sr->SetProfile(&pinfo);
 	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
 		wprintf_s(L"Failed to Configure the Module\n");
 		return -1;
 	}
+	pxcCHAR *cmds[3] = { L"Read text for me", L"Recognize face", L"What is the weather" };
+	sr->BuildGrammarFromStringList(1, cmds, 0, 3);
+	sr->SetGrammar(1);
+	
+
 	//Set the Recognition mode command and control mode or dictation mode
 	sts = sr->SetDictation();
 	if (sts != pxcStatus::PXC_STATUS_NO_ERROR) {
